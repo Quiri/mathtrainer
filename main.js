@@ -6,7 +6,7 @@ function rnd(min, max) {
 
 function gcd(a, b) {
   a = Math.abs(a); b = Math.abs(b);
-  while (b) { [a, b] = [b, a % b]; }
+  while (b) { let t = b; b = a % b; a = t; }
   return a;
 }
 
@@ -153,14 +153,15 @@ const generators = {
 
     let question, hint, correct;
 
-    if (mode === 0) {
-      // a·b + a·c → a(b + c)
-      const term1 = a * b;
-      const term2 = a * c;
+    if (mode === 0 || mode === 2) {
+      // mode 0: a·b + a·c → a(b + c)
+      // mode 2: larger factors
+      const factor = mode === 2 ? a + rnd(2, maxA) : a;
+      const term1 = factor * b;
+      const term2 = factor * c;
       question = `${term1}x + ${term2}  =  ?`;
-      hint = `Finde den größten gemeinsamen Teiler. Format: z.B. 3(2x + 5)`;
+      hint = mode === 2 ? 'Klammere den ggT aus. Format: z.B. 6(3x + 2)' : `Finde den größten gemeinsamen Teiler. Format: z.B. 3(2x + 5)`;
 
-      // Accept variants: a(bx + c) or a·(bx + c)
       const g = gcd(term1, term2);
       const f1 = term1 / g;
       const f2 = term2 / g;
@@ -171,8 +172,6 @@ const generators = {
         hint,
         checkAnswer(input) {
           const s = input.trim().replace(/\s/g, '').replace(/·|\*/g, '');
-          // Accept any factoring that matches a valid factored form
-          // Parse k(mx + n)
           const m = s.match(/^(\d+)\((\d+)x\+(\d+)\)$/);
           if (!m) return false;
           const k = parseInt(m[1]), mx = parseInt(m[2]), n = parseInt(m[3]);
@@ -180,8 +179,8 @@ const generators = {
         },
         solutionStr: correct
       };
-    } else if (mode === 1) {
-      // a·b·x + a·c·x² → ax(b + cx)
+    } else {
+      // mode 1: a·b·x + a·c·x² → ax(b + cx)
       const term1 = a * b;
       const term2 = a * c;
       question = `${term1}x + ${term2}x²  =  ?`;
@@ -200,30 +199,6 @@ const generators = {
           if (!m) return false;
           const k = parseInt(m[1]), f = parseInt(m[2]), h = parseInt(m[3]);
           return k * f === term1 && k * h === term2;
-        },
-        solutionStr: correct
-      };
-    } else {
-      // (a+d)·b·x + (a+d)·c  → (a+d)(bx + c)
-      const d = rnd(2, maxA);
-      const term1 = a * b + d * b; // (a+d)b
-      const term2 = a * c + d * c; // (a+d)c
-      const g = gcd(Math.abs(term1), Math.abs(term2));
-      const f1 = term1 / g;
-      const f2 = term2 / g;
-      question = `${term1}x + ${term2}  =  ?`;
-      hint = 'Klammere den ggT aus. Format: z.B. 6(3x + 2)';
-      correct = `${g}(${f1}x + ${f2})`;
-
-      return {
-        question,
-        hint,
-        checkAnswer(input) {
-          const s = input.trim().replace(/\s/g, '').replace(/·|\*/g, '');
-          const m = s.match(/^(\d+)\((\d+)x\+(\d+)\)$/);
-          if (!m) return false;
-          const k = parseInt(m[1]), mx = parseInt(m[2]), n = parseInt(m[3]);
-          return k * mx === term1 && k * n === term2;
         },
         solutionStr: correct
       };
@@ -341,12 +316,7 @@ function updateScore() {
 }
 
 function updateDots() {
-  dotsEl.innerHTML = '';
-  history.slice(-30).forEach(r => {
-    const d = document.createElement('div');
-    d.className = 'dot ' + r;
-    dotsEl.appendChild(d);
-  });
+  dotsEl.innerHTML = history.slice(-30).map(r => `<div class="dot ${r}"></div>`).join('');
 }
 
 function loadTask() {
